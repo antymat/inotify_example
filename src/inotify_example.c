@@ -1,36 +1,14 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <dirent.h>
-#include <err.h>
-#include <sys/mman.h>
-#include <sys/stat.h>        /* For mode constants */
-#include <fcntl.h>           /* For O_* constants */
-#include <semaphore.h>
-#include <assert.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/inotify.h>
-#include <limits.h>
+#include "inotify_example.h"
 
 
-#define EARGC (1)
-#define SEM_INOTIFY "/inotify_sem"
-#define SHM_INOTIFY "/inotify_shm"
-#define INOTIFY_BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
 /* inotify example - reinventing inotyfywait/inotifywatch */
 
 
 struct llist {
 	struct llist *next;
 	uint8_t udata[];
-};
-
-struct file_data {
-	struct stat statbuf;
-	uint32_t fname_buf_len;
-	char fname_buf[];
 };
 
 struct llist* llist_add(struct llist *head, struct llist *new)
@@ -172,14 +150,30 @@ void wait_inot(const char *dirname)
 	close(inot);
 }
 
+void share_flist(void *shm_addr, struct llist *flist)
+{
+	struct file_data *fdata = NULL;
+	while(flist) {
+		size_t dlen;
+		fdata = (struct file_data*) (flist->udata);
+		dlen = fdata->fname_buf_len + sizeof(*fdata);
+		memcpy(shm_addr, fdata, dlen);
+		shm_addr += dlen;
+		flist = flist->next;
+	}
+}
+
+
+
 int main(int argc, char* argv[])
 {
 	const char *dirname = ".";
 	sem_t *sem;
-	int shmfd;
-	int64_t shm_len = 0;
+	int shm_fd;
+	size_t	shm_len = 0;
 	struct llist *flist = NULL;
 	struct dirent *entry = NULL;
+	void *shm_addr = NULL;
 
 	cleanup();
 	if (argc > 2) {
@@ -187,40 +181,40 @@ int main(int argc, char* argv[])
 		return EARGC;
 	}
 	if (argc == 2) dirname = argv[1];
-	//if ((sem = sem_open(SEM_INOTIFY, O_CREAT, 0666, 0)) == SEM_FAILED) {
-	//	errx(1, "sem_open");
-	//}
-	//if ((shmfd = shm_open(SHM_INOTIFY, O_CREAT | O_RDWR | O_TRUNC,
-	//		 S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
-	//	errx(1, "shm_open");
-	//}
-
-	//while (1) {
-	do {
-		shm_len = read_dir_data_size(dirname, &flist);
+	if ((sem = sem_open(SEM_INOTIFY, O_CREAT, 0666, 0)) == SEM_FAILED) {
+		errx(1, "sem_open");
+	}
+	if ((shm_fd = shm_open(SHM_INOTIFY, O_CREAT | O_RDWR | O_TRUNC,
+			 S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
+		errx(1, "shm_open");
+	}
+	while (1) {
+	//do {
+		shm_len = read_dir_data_size(dirname, &flist) + sizeof(shm_len);
 		print_list(flist);
-		flist = llist_free(flist);
-		//ftruncate(shmfd, shm_len);
 		/* resize the shared memory */
-		//while (entry = readdir(dir)) {
-		//	if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
-		//		continue;
-		//	/* read the file names and data */
-		//}
-		/* close the directory */
-		//if (closedir(dir)) {
-		//	cleanup();
-		//	errx(1, "closedir");
-		//}
-		//sem_post(sem);
+		if (ftruncate(shm_fd, shm_len) == -1) {
+			cleanup();
+			errx(1, "ftruncate");
+		}
+		shm_addr = mmap(0, shm_len, PROT_READ | PROT_WRITE,
+				MAP_SHARED, shm_fd, 0);
+		if (shm_addr == MAP_FAILED) {
+			errx(1, "mmap");
+		}
+		*(size_t*)shm_addr = shm_len;
+		shm_addr += sizeof(shm_len);
+		share_flist(shm_addr, flist);
+		munmap(shm_addr, shm_len);
+
+		flist = llist_free(flist);
+		sem_post(sem);
 		/* wait for the change in folder */
 		wait_inot(dirname);
-
-
-		/* read all the events - non-blocking */
-		//sem_wait(sem);
-	//}
-	} while(0);
+		sem_wait(sem);
+	}
+	//} while(0);
+	cleanup();
 	return 0;
 }
 
