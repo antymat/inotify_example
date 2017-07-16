@@ -21,24 +21,10 @@ struct llist* llist_remove(struct llist *head)
 	return head->next;
 }
 
-
-
 void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s <dirname>\nEmpty <dirname> for '.'\n", name);
 }
-
-//sighandler_t set_signal_handler(int sig, sighandler_t handler)
-//{
-//	struct sigaction new;
-//	struct sigaction old;
-//	memset(&new, 0, sizeof(new));
-//	memset(&old, 0, sizeof(old));
-//	new.sa_handler = handler;
-//	if (sigaction(SIGINT, &new, &old))
-//		errx(1, "sigaction");
-//	return old.sa_handler;
-//}
 
 /* ignore all the errors, just close all the shared resources */
 void cleanup(void)

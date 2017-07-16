@@ -13,7 +13,11 @@ void usage(const char *name)
 void print_html_header(FILE *handle)
 {
 	assert(handle);
-	fprintf(handle, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"> <HTML> <HEAD> <TITLE>A simple inotify example client output</TITLE> </HEAD> <BODY><TABLE Border=\"3\" Cellpadding=\"6\" Cellspacing=\"1\" Align=\"center\"> <TR> <TH>File Name</TH> <TH>File Size</TH> </TR>");
+	fprintf(handle, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">
+		<HTML> <HEAD> <TITLE>A simple inotify example client output</TITLE>
+		</HEAD> <BODY><TABLE Border=\"3\" Cellpadding=\"6\" Cellspacing=\"1\"
+		Align=\"center\"> <TR> <TH>File Name</TH> <TH>File Size</TH>
+		</TR>");
 }
 
 void print_html_footer(FILE *handle)
