@@ -1,5 +1,6 @@
 #ifndef __INOTIFY_EXAMPLE_H__
 #define __INOTIFY_EXAMPLE_H__
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -13,8 +14,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <limits.h>
-#define _GNU_SOURCE
 #include <sys/mman.h>
+#include <linux/limits.h>
 
 
 #define EARGC (1)

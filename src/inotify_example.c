@@ -77,7 +77,6 @@ size_t read_dir_data_size(const char *dirname, struct llist **head)
 		cleanup();
 		errx(1, "opendir: %s", dirname);
 	}
-	//rewinddir(dir);
 	while (entry = readdir(dir)) {
 		struct file_data *fdata = NULL;
 		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
@@ -119,7 +118,7 @@ size_t read_dir_data_size(const char *dirname, struct llist **head)
 void print_list(struct llist *flist)
 {
 	while(flist) {
-		printf("fname = \"%s\",\tsize = \"%d\"\n",
+		printf("fname = \"%s\",\tsize = \"%dl\"\n",
 		       ((struct file_data*)(flist->udata))->fname_buf,
 		       ((struct file_data*)(flist->udata))->statbuf.st_size);
 		flist = flist->next;
@@ -184,7 +183,6 @@ int main(int argc, char* argv[])
 	int shm_fd;
 	size_t	shm_len = 0;
 	struct llist *flist = NULL;
-	struct dirent *entry = NULL;
 	void *shm_addr = NULL;
 
 	cleanup();
