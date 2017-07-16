@@ -5,7 +5,8 @@
 
 void usage(const char *name)
 {
-	fprintf(stderr, "Usage: %s", name);
+	fprintf(stderr, "Usage: %s <filename>. Empty <filename> for stdout.",
+		name);
 }
 
 
@@ -43,6 +44,12 @@ int main(int argc, char* argv[])
 			 S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
 		errx(1, "shm_open");
 	}
+	if (argc == 2) {
+		if (!(fout = fopen(argv[1], "w"))) {
+			errx(1, "fopen %s", argv[1]);
+		}
+	}
+
 	/*while (1)*/ {
 		struct file_data *fdata = NULL;
 		size_t dlen;
