@@ -21,11 +21,11 @@ void usage(const char *name)
 //}
 
 /* ignore all the errors, just close all the shared resources */
-void cleanup(void)
-{
-	sem_unlink(SEM_INOTIFY);
-	shm_unlink(SHM_INOTIFY);
-}
+//void cleanup(void)
+//{
+//	sem_unlink(SEM_INOTIFY);
+//	shm_unlink(SHM_INOTIFY);
+//}
 
 
 
@@ -36,28 +36,32 @@ void cleanup(void)
 
 int main(int argc, char* argv[])
 {
-	sem_t *sem;
+	sem_t *sem_shm, *sem_inot;
 	int shm_fd;
 	size_t	shm_len = 0;
 	void *shm_addr = NULL;
 
-	cleanup();
+	//cleanup();
 	if (argc > 1) {
 		usage(*argv);
 		return EARGC;
 	}
-	if ((sem = sem_open(SEM_INOTIFY, O_CREAT, 0666, 0)) == SEM_FAILED) {
+	if ((sem_shm = sem_open(SEM_SH_MEM, O_RDWR)) == SEM_FAILED) {
 		errx(1, "sem_open");
 	}
-	if ((shm_fd = shm_open(SHM_INOTIFY, O_CREAT | O_RDWR | O_TRUNC,
+	if ((sem_inot = sem_open(SEM_INOTIFY, O_RDWR)) == SEM_FAILED) {
+		errx(1, "sem_open");
+	}
+	if ((shm_fd = shm_open(SHM_INOTIFY, O_CREAT | O_RDWR,
 			 S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
 		errx(1, "shm_open");
 	}
-	//while (1) {
-	do {
+	while (1) {
+	//do {
 		struct file_data *fdata = NULL;
 		size_t dlen;
-		sem_wait(sem);
+		sem_wait(sem_inot);
+		sem_wait(sem_shm);
 		shm_addr = mmap(0, sizeof(shm_len), PROT_READ | PROT_WRITE,
 				MAP_SHARED, shm_fd, 0);
 		if (shm_addr == MAP_FAILED) {
@@ -72,7 +76,7 @@ int main(int argc, char* argv[])
 			errx(1, "mmap");
 		}
 		shm_addr += sizeof(shm_len);
-		shm_len -+ sizeof(shm_len);
+		shm_len -= sizeof(shm_len);
 		while(shm_len) {
 			fdata = (struct file_data*)shm_addr;
 			printf("fname = \"%s\",\tsize = \"%d\"\n",
@@ -81,12 +85,13 @@ int main(int argc, char* argv[])
 			dlen = fdata->fname_buf_len + sizeof(*fdata);
 			shm_len -= dlen;
 			shm_addr += dlen;
+			//printf("\t\t\tshm_len = \"%d\"\n", shm_len);
 		}
 		munmap(shm_addr, sizeof(shm_len));
-		sem_post(sem);
-	//}
-	} while(0);
-	cleanup();
+		sem_post(sem_shm);
+	}
+	//} while(0);
+	//cleanup();
 	return 0;
 }
 

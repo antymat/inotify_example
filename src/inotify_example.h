@@ -18,6 +18,7 @@
 
 
 #define EARGC (1)
+#define SEM_SH_MEM "/inotify_sem_shm"
 #define SEM_INOTIFY "/inotify_sem"
 #define SHM_INOTIFY "/inotify_shm"
 #define INOTIFY_BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)

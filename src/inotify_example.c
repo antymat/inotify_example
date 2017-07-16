@@ -168,7 +168,7 @@ void share_flist(void *shm_addr, struct llist *flist)
 int main(int argc, char* argv[])
 {
 	const char *dirname = ".";
-	sem_t *sem;
+	sem_t *sem_shm, *sem_inot;
 	int shm_fd;
 	size_t	shm_len = 0;
 	struct llist *flist = NULL;
@@ -181,7 +181,12 @@ int main(int argc, char* argv[])
 		return EARGC;
 	}
 	if (argc == 2) dirname = argv[1];
-	if ((sem = sem_open(SEM_INOTIFY, O_CREAT, 0666, 0)) == SEM_FAILED) {
+	if ((sem_inot = sem_open(SEM_INOTIFY, O_CREAT | O_RDWR, 0666, 0))
+	    == SEM_FAILED) {
+		errx(1, "sem_openi");
+	}
+	if ((sem_shm = sem_open(SEM_SH_MEM, O_CREAT | O_RDWR, 0666, 1))
+	    == SEM_FAILED) {
 		errx(1, "sem_open");
 	}
 	if ((shm_fd = shm_open(SHM_INOTIFY, O_CREAT | O_RDWR | O_TRUNC,
@@ -192,6 +197,7 @@ int main(int argc, char* argv[])
 	//do {
 		shm_len = read_dir_data_size(dirname, &flist) + sizeof(shm_len);
 		print_list(flist);
+		sem_wait(sem_shm);
 		/* resize the shared memory */
 		if (ftruncate(shm_fd, shm_len) == -1) {
 			cleanup();
@@ -206,12 +212,12 @@ int main(int argc, char* argv[])
 		shm_addr += sizeof(shm_len);
 		share_flist(shm_addr, flist);
 		munmap(shm_addr, shm_len);
+		sem_post(sem_shm);
+		sem_post(sem_inot);
 
 		flist = llist_free(flist);
-		sem_post(sem);
 		/* wait for the change in folder */
 		wait_inot(dirname);
-		sem_wait(sem);
 	}
 	//} while(0);
 	cleanup();
