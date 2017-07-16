@@ -47,6 +47,13 @@ void cleanup(void)
 	shm_unlink(SHM_INOTIFY);
 }
 
+/**
+ * @brief De-allocate all the list
+ *
+ * @param head file list head
+ *
+ * @retval NULL
+ */
 struct llist *llist_free(struct llist *head)
 {
 	struct llist *oldh;
@@ -59,7 +66,15 @@ struct llist *llist_free(struct llist *head)
 }
 
 
-int64_t read_dir_data_size(const char *dirname, struct llist **head)
+/**
+ * @brief Read directory information
+ *
+ * @param dirname - directory name
+ * @param head - head of file list
+ *
+ * @return the size of all the stat structures and file names
+ */
+size_t read_dir_data_size(const char *dirname, struct llist **head)
 {
 	static char fpath[PATH_MAX];
 	struct dirent *entry = NULL;
@@ -110,6 +125,11 @@ int64_t read_dir_data_size(const char *dirname, struct llist **head)
 }
 
 
+/**
+ * @brief Debug-print of the file list
+ *
+ * @param flist head of the file list
+ */
 void print_list(struct llist *flist)
 {
 	while(flist) {
@@ -150,6 +170,12 @@ void wait_inot(const char *dirname)
 	close(inot);
 }
 
+/**
+ * @brief Put file data into the shared memory
+ *
+ * @param shm_addr shared memory address
+ * @param flist list of file description structures
+ */
 void share_flist(void *shm_addr, struct llist *flist)
 {
 	struct file_data *fdata = NULL;
@@ -194,7 +220,6 @@ int main(int argc, char* argv[])
 		errx(1, "shm_open");
 	}
 	while (1) {
-	//do {
 		shm_len = read_dir_data_size(dirname, &flist) + sizeof(shm_len);
 		print_list(flist);
 		sem_wait(sem_shm);
@@ -219,7 +244,6 @@ int main(int argc, char* argv[])
 		/* wait for the change in folder */
 		wait_inot(dirname);
 	}
-	//} while(0);
 	cleanup();
 	return 0;
 }

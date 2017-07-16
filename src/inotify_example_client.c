@@ -5,34 +5,21 @@
 
 void usage(const char *name)
 {
-	fprintf(stderr, "Usage: %s <dirname>\nEmpty <dirname> for '.'\n", name);
+	fprintf(stderr, "Usage: %s", name);
 }
 
-//sighandler_t set_signal_handler(int sig, sighandler_t handler)
-//{
-//	struct sigaction new;
-//	struct sigaction old;
-//	memset(&new, 0, sizeof(new));
-//	memset(&old, 0, sizeof(old));
-//	new.sa_handler = handler;
-//	if (sigaction(SIGINT, &new, &old))
-//		errx(1, "sigaction");
-//	return old.sa_handler;
-//}
 
-/* ignore all the errors, just close all the shared resources */
-//void cleanup(void)
-//{
-//	sem_unlink(SEM_INOTIFY);
-//	shm_unlink(SHM_INOTIFY);
-//}
+void print_html_header(FILE *handle)
+{
+	assert(handle);
+	fprintf(handle, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"> <HTML> <HEAD> <TITLE>A simple inotify example client output</TITLE> </HEAD> <BODY><TABLE Border=\"3\" Cellpadding=\"6\" Cellspacing=\"1\" Align=\"center\"> <TR> <TH>File Name</TH> <TH>File Size</TH> </TR>");
+}
 
-
-
-
-
-
-
+void print_html_footer(FILE *handle)
+{
+	assert(handle);
+	fprintf(handle, "</TABLE> </BODY> </HTML>");
+}
 
 int main(int argc, char* argv[])
 {
@@ -40,9 +27,9 @@ int main(int argc, char* argv[])
 	int shm_fd;
 	size_t	shm_len = 0;
 	void *shm_addr = NULL;
+	FILE *fout = stdout;
 
-	//cleanup();
-	if (argc > 1) {
+	if (argc > 2) {
 		usage(*argv);
 		return EARGC;
 	}
@@ -56,8 +43,7 @@ int main(int argc, char* argv[])
 			 S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
 		errx(1, "shm_open");
 	}
-	while (1) {
-	//do {
+	/*while (1)*/ {
 		struct file_data *fdata = NULL;
 		size_t dlen;
 		sem_wait(sem_inot);
@@ -77,21 +63,20 @@ int main(int argc, char* argv[])
 		}
 		shm_addr += sizeof(shm_len);
 		shm_len -= sizeof(shm_len);
+		print_html_header(fout);
 		while(shm_len) {
 			fdata = (struct file_data*)shm_addr;
-			printf("fname = \"%s\",\tsize = \"%d\"\n",
+			fprintf(fout,"<TR><TD>%s</TD><TD>%d</TD></TR>",
 			       fdata->fname_buf,
 			       fdata->statbuf.st_size);
 			dlen = fdata->fname_buf_len + sizeof(*fdata);
 			shm_len -= dlen;
 			shm_addr += dlen;
-			//printf("\t\t\tshm_len = \"%d\"\n", shm_len);
 		}
+		print_html_footer(fout);
 		munmap(shm_addr, sizeof(shm_len));
 		sem_post(sem_shm);
 	}
-	//} while(0);
-	//cleanup();
 	return 0;
 }
 
